@@ -50,6 +50,7 @@ linters:
     - gochecknoglobals # Globals are usefull for cobra.
     - varnamelen
     - tagliatelle
+    - errorlint
   fast: false
 
 issues:
