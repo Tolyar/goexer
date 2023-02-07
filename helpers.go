@@ -1,6 +1,7 @@
 package goexer
 
 import (
+	"fmt"
 	"reflect"
 )
 
@@ -19,6 +20,11 @@ func New(msg string) *Error {
 	ee := newError(2, msg)
 
 	return ee
+}
+
+// Formatted new.
+func Newf(format string, args ...interface{}) *Error {
+	return New(fmt.Sprintf(format, args...))
 }
 
 func fatal(err *Error, msg string) {
@@ -67,6 +73,11 @@ func Wrap(prev error, msg string) *Error {
 	}
 
 	return err
+}
+
+// Formatted wrap.
+func Warpf(prev error, format string, args ...interface{}) *Error {
+	return Wrap(prev, fmt.Sprintf(format, args...))
 }
 
 func Cause(err error) error {

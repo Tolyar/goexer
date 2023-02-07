@@ -93,6 +93,7 @@ func TestWrap(t *testing.T) {
 		t.Errorf("Function name should be testing.go, got %s", err.File)
 	}
 
+	//nolint:goconst
 	if err.Original == nil || err.Original.Error() != "original" {
 		t.Errorf("Incorrect original error. Wants not nil with message 'original', got '%v'", err.Original)
 	}
@@ -129,7 +130,7 @@ func TestFormat(t *testing.T) {
 	t.Parallel()
 
 	//nolint:goerr113
-	err := goexer.Wrap(goexer.Wrap(errors.New("original"), "previous"), "current")
+	err := goexer.Wrap(goexer.Wrap(errors.New("orig"), "previous"), "current")
 
 	str := fmt.Sprintf("%s", err)
 	if str != "current" {

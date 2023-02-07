@@ -93,12 +93,12 @@ func TestContainerGetRaw(t *testing.T) {
 	t.Parallel()
 
 	cc := goexer.NewContainer()
-	cc.Set("test", "test")
+	cc.Set("test123", "test123")
 
-	rr := cc.GetRaw("test")
+	rr := cc.GetRaw("test123")
 	vv, ok := rr.(string)
-	if !ok || vv != "test" {
-		t.Errorf("Want 'test' but got '%v'", rr)
+	if !ok || vv != "test123" {
+		t.Errorf("Want 'test123' but got '%v'", rr)
 	}
 
 	rr = cc.GetRaw("not-exists")
