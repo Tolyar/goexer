@@ -2,93 +2,171 @@ package goexer
 
 import (
 	"fmt"
+	"log"
 	"reflect"
+
+	"github.com/rs/zerolog"
 )
 
+// Check if error is *goexer.Error.
+func IsGoexerError(err error) bool {
+	return reflect.TypeOf(err).String() == ErrorTypeString
+}
+
 // New - create new Error.
-func newError(depth int, msg string) *Error {
+func newError(depth int, msg string, op ErrorOpts) *Error {
 	err := Error{}
-	err.setLocation(depth) // This error.
-	err.Container = NewContainer()
+	opts := DefaultErrorOpts
+
+	switch {
+	case op.Name != "":
+		opts.Name = op.Name
+	case op.Container != nil:
+		opts.Container = op.Container
+	case op.ShowContainerItems != nil:
+		opts.ShowContainerItems = op.ShowContainerItems
+	case op.ShowContainerSize != nil:
+		opts.ShowContainerSize = op.ShowContainerSize
+	case op.ShowContainerAsZKeys != nil:
+		opts.ShowContainerAsZKeys = op.ShowContainerAsZKeys
+	}
+
+	err.setLocation(depth + opts.Depth) // This error.
+	if opts.Container == nil {
+		err.Container = NewContainer()
+	} else {
+		err.Container = opts.Container
+	}
 	err.Message = msg
+	err.Name = opts.Name
+
+	err.ShowContainerItems = opts.ShowContainerItems
+	if opts.ShowContainerAsZKeys != nil {
+		err.ShowContainerAsZKeys = *opts.ShowContainerAsZKeys
+	}
+	if opts.ShowContainerSize != nil {
+		err.ShowContainerSize = *opts.ShowContainerSize
+	}
 
 	return &err
 }
 
 // New - create new Error.
-func New(msg string) *Error {
-	ee := newError(2, msg)
+func New(msg string, args ...ErrorOpts) *Error {
+	if len(args) > 1 {
+		fatal(New("Only one or zero ErrorOpts could be passed to New()"), "Only one or zero ErrorOpts could be passed to New()")
+	}
+
+	opts := DefaultErrorOpts
+
+	if len(args) == 1 {
+		opts = args[0]
+	}
+
+	ee := newError(2+opts.Depth, msg, opts)
 
 	return ee
 }
 
-// Formatted new.
-func Newf(format string, args ...interface{}) *Error {
-	return New(fmt.Sprintf(format, args...))
-}
-
 func fatal(err *Error, msg string) {
-	//nolint:gocritic
-	if zLog != nil {
+	switch {
+	case zLog != nil:
 		zLog.Fatal().
 			Uint("line", err.Line).
 			Str("function", err.Function).
 			Str("file", err.File).
 			Msg(msg)
-	} else if bLog != nil {
+	case bLog != nil:
 		bLog.Fatalf(
 			msg+" line: %d func: %s file: %s\n",
 			err.Line,
 			err.Function,
 			err.File,
 		)
-	} else {
+	default:
 		// Last chance.
 		panic("Incorrect wrap usage. Previous error should not be nil.")
 	}
 }
 
 // Wrapp old error to the new one.
-func Wrap(prev error, msg string) *Error {
-	err := newError(2, msg) // Current error stack.
+func Wrap(prev error, msg string, args ...ErrorOpts) *Error {
+	if len(args) > 1 {
+		fatal(New("Only one or zero ErrorOpts could be passed to Wrap()"), "Only one or zero ErrorOpts could be passed to Wrap()")
+	}
+
+	opts := DefaultErrorOpts
+
+	if len(args) == 1 {
+		opts = args[0]
+	}
+
+	err := newError(2, msg, opts) // Current error stack.
 
 	if prev == nil {
 		fatal(err, "goexer.Error.Wrap: Incorrect wrap usage. Previous error should not be nil.")
 	}
 
-	if reflect.TypeOf(prev).String() != "*goexer.Error" {
-		errPrev := newError(3, prev.Error()) // Previous error stack.
+	if IsGoexerError(prev) {
+		err.Name = ToError(prev).Name
+	}
+
+	if !IsGoexerError(prev) {
+		errPrev := newError(3, prev.Error(), opts) // Previous error stack.
 		errPrev.Original = prev
 		err.Previous = errPrev
 		err.Original = prev
-	} else if p, ok := prev.(*Error); ok {
-		err.Previous = p
-		if p.Original == nil {
-			err.Original = p
-		} else {
-			err.Original = p.Original
-		}
 	} else {
-		fatal(err, "Can't convert prev to *Error")
+		err.Previous = ToError(prev)
+		if err.Previous.Original == nil {
+			err.Original = err.Previous
+		} else {
+			err.Original = err.Previous.Original
+		}
 	}
 
 	return err
 }
 
+// Convert any error to Error.
+func ToError(err error) *Error {
+	ee, ok := err.(*Error)
+	if !ok {
+		return newError(3, err.Error(), DefaultErrorOpts) // Previous error stack.
+	}
+
+	return ee
+}
+
 // Formatted wrap.
-func Warpf(prev error, format string, args ...interface{}) *Error {
+func Wrapf(prev error, format string, args ...interface{}) *Error {
 	return Wrap(prev, fmt.Sprintf(format, args...))
 }
 
 func Cause(err error) error {
-	if reflect.TypeOf(err).String() == "*goexer.Error" {
-		ee, ok := err.(*Error)
-		if !ok {
-			fatal(newError(2, "goexer.Cause"), "goexer.Cause can't convert interface{}")
-		}
-
-		return ee.Original
+	if IsGoexerError(err) {
+		return ToError(err).Original
 	}
 
 	return err
+}
+
+// SetOpts - set DefaultOptions.
+func SetDefaultOpts(opts ErrorOpts) {
+	DefaultErrorOpts = opts
+}
+
+// Set global zerolog logger.
+func SetZLog(log *zerolog.Logger) {
+	zLog = log
+}
+
+// Set global basic logger.
+func SetBLog(log *log.Logger) {
+	bLog = log
+}
+
+// Check error and log fatal message if not nil.
+func CheckErr(err error) {
+	ToError(err).LogFatal()
 }

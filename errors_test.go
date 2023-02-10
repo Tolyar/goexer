@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -16,8 +17,10 @@ func TestNew(t *testing.T) {
 	t.Parallel()
 
 	err := goexer.New("Test error")
+	//nolint:dogsled
+	_, currentFile, _, _ := runtime.Caller(0)
 
-	if reflect.TypeOf(err.Container).String() != "goexer.Container" {
+	if reflect.TypeOf(err.Container).String() != "*goexer.Container" {
 		t.Errorf("Want container type 'goexec.Container' but got '%T'", err.Container)
 	}
 	if err.Line == 0 {
@@ -29,7 +32,7 @@ func TestNew(t *testing.T) {
 	}
 
 	if err.File != currentFile {
-		t.Errorf("Function name should be %s, got %s", currentFile, err.File)
+		t.Errorf("File name should be %s, got %s", currentFile, err.File)
 	}
 }
 
@@ -49,6 +52,10 @@ func TestWrap(t *testing.T) {
 	if err.Function != "github.com/Tolyar/goexer_test.TestWrap" {
 		t.Errorf("Function name should be github.com/Tolyar/goexer_test.TestWrap, got %s", err.Function)
 	}
+
+	//nolint:dogsled
+	_, currentFile, _, _ := runtime.Caller(0)
+	_, prevFile, _, _ := runtime.Caller(1)
 
 	if err.File != currentFile {
 		t.Errorf("File name should be %s, got %s", currentFile, err.File)
@@ -89,8 +96,13 @@ func TestWrap(t *testing.T) {
 		t.Errorf("Function name should be testing.tRunner, got %s", err.Function)
 	}
 
-	if err.File != "testing.go" {
-		t.Errorf("Function name should be testing.go, got %s", err.File)
+	// //nolint:dogsled
+	// _, file, _, _ := runtime.Caller(0)
+	// fs := strings.Split(file, "/")
+	// currentFile = fs[len(fs)-1]
+
+	if err.File != prevFile {
+		t.Errorf("File name should be %s, got %s", prevFile, err.File)
 	}
 
 	//nolint:goconst
@@ -129,17 +141,24 @@ func TestFuncCause(t *testing.T) {
 func TestFormat(t *testing.T) {
 	t.Parallel()
 
+	//nolint:dogsled
+	pc, file, line, _ := runtime.Caller(0)
 	//nolint:goerr113
 	err := goexer.Wrap(goexer.Wrap(errors.New("orig"), "previous"), "current")
 
 	str := fmt.Sprintf("%s", err)
-	if str != "current" {
-		t.Errorf("%%s format: want '%s', got '%s'", "current", str)
+
+	fs := strings.Split(file, "/")
+	currentFile := fs[len(fs)-1]
+	// BaseError: errors_test.go:139 github.com/Tolyar/goexer_test.TestFormat(): 'current'
+	msg := fmt.Sprintf("BaseError: %s:%d %s(): 'current'", currentFile, line+2, runtime.FuncForPC(pc).Name())
+	if str != msg {
+		t.Errorf("%%s format: want '%s', got '%s'", msg, str)
 	}
 
 	str = fmt.Sprintf("%v", err)
-	if str != "current" {
-		t.Errorf("%%v format: want '%s', got '%s'", "current", str)
+	if str != msg {
+		t.Errorf("%%v format: want '%s', got '%s'", msg, str)
 	}
 
 	str = fmt.Sprintf("%+v", err)
@@ -148,7 +167,7 @@ func TestFormat(t *testing.T) {
 		t.Errorf("%%+v format: want '%s', got '%s'", want, str)
 	}
 
-	want = `&goexer.ErrorWrap{Message:"current", Code:0, Function:"github.com/Tolyar/goexer_test.TestFormat", File:"errors_test.go"`
+	want = `&goexer.ErrorWrap{Message:"current", Name:"BaseError", Function:"github.com/Tolyar/goexer_test.TestFormat"`
 	str = fmt.Sprintf("%#v", err)[:len(want)]
 	if strings.Compare(want, str) != 0 {
 		t.Errorf("%%#v format:\n want '%s'\n  got '%s'", want, str)

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/samber/lo"
 	"github.com/spf13/cast"
 )
 
@@ -14,14 +15,18 @@ type Item struct {
 	Name  string // Just for better string representation.
 }
 
+// Return string representation for Item.
 func (i *Item) String() string {
 	return fmt.Sprintf("Item{ Name: '%s' Type: '%s' Value: %v}", i.Name, i.Type, i.Get())
 }
 
+// Return raw, unconverted Value as interface{}.
 func (i *Item) GetRaw() interface{} {
 	return i.Value
 }
 
+// Return converted to original type, if possible, value of item.
+//
 //gocyclo:ignore
 func (i *Item) Get() any {
 	switch i.Type {
@@ -126,7 +131,8 @@ func (c *Container) GetRawE(key string) (any, bool) {
 	return item.GetRaw(), true
 }
 
-func (c *Container) Set(key string, value interface{}) {
+// Set value for item.
+func (c *Container) Set(key string, value interface{}) *Container {
 	item := Item{
 		Name:  key,
 		Value: value,
@@ -135,11 +141,24 @@ func (c *Container) Set(key string, value interface{}) {
 	item.Type = reflect.TypeOf(value).String()
 
 	c.items[key] = item
+
+	return c
 }
 
-func NewContainer() Container {
+// Create new variable of type Container.
+func NewContainer() *Container {
 	cc := Container{}
 	cc.items = make(map[string]Item)
 
-	return cc
+	return &cc
+}
+
+// Return count of fields (items) inside Container.
+func (c *Container) Size() int {
+	return len(c.items)
+}
+
+// Return all keys of fields inside Container.
+func (c *Container) Keys() []string {
+	return lo.Keys(c.items)
 }
