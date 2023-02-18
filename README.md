@@ -1,20 +1,20 @@
 # goexer - Golang extended errors package
 
-**WARNING: API of this package still unstable. Please wait v1.0.0 before usage.**
+**WARNING: API of this package is still unstable. Please wait v1.0.0 before usage.**
 
-I like Golang errors extenders but can't found library that will be ideal for me.
+I like Golang errors extenders but couldn't find a library that is ideal for me.
 
 E.g.
 
-* https://github.com/pkg/errors - my favorite package, but does not allow to easy extend errors with custom fields.
-* https://upspin.io/errors - support custom fields but only fixed inside library.
-* https://github.com/juju/errors/ - Very useful package, but still does not support custom fields.
+* https://github.com/pkg/errors - my favorite package, but doesn't allow to easily extend errors with custom fields.
+* https://upspin.io/errors - supports custom fields, but they are fixed inside library.
+* https://github.com/juju/errors/ - Very useful package, but doesn't support custom fields.
 
-In this project I will try to realize flexible error type. I still does not know how it should be. I have several ideas. So, I do not recommend use this library before v1.0.0 will be done.
+In this project I will try to implement a flexible error type. I still don't know how it should work, but I have several ideas. So, I do not recommend using this library before v1.0.0 will be done.
 
 # How it works
 
-Each error has embedded storage container and stack of errors. In any time you can get any error from stack and check it's type, message and where is this error was raised (function name, file path, line number). You can Wrap() any errors interface compatible errors. Goexer does not full compatible with errors package and can't replace it. Also some functions may works in different style than functions from errors.
+Each error has an embedded storage container and stack of errors. At any time you can get any error from stack and check its type, message and where it was raised (function name, file path, line number). You can Wrap() any errors interface compatible errors. Goexer does not full compatible with errors package and can't replace it. Also some functions may works in different style than functions from errors.
 Each error can be created with ErrorOpts. By default will be used DefaultErrorOpts. Goexer has some helpers for usage with zerolog. You need set zerolog's instance for usage it.
 
 # Types
@@ -111,7 +111,7 @@ err.LogError("message2")
 err.LogTrace("message")
 ```
 
-Correct way to create new error. Use Depth: 1 for getting real stack of error's rise but not place where func ErrNotFound() was created.
+The correct way to create a new error. Use Depth: 1 for getting original .
 ```go
 func ErrNotFound(msg string) *goexer.Error {
 	return goexer.New(msg, goexer.ErrorOpts{Depth: 1})
