@@ -11,8 +11,6 @@ import (
 	"github.com/Tolyar/goexer"
 )
 
-const currentFile = "errors_test.go"
-
 func TestNew(t *testing.T) {
 	t.Parallel()
 
@@ -55,6 +53,7 @@ func TestWrap(t *testing.T) {
 
 	//nolint:dogsled
 	_, currentFile, _, _ := runtime.Caller(0)
+	//nolint:dogsled
 	_, prevFile, _, _ := runtime.Caller(1)
 
 	if err.File != currentFile {
@@ -141,7 +140,6 @@ func TestFuncCause(t *testing.T) {
 func TestFormat(t *testing.T) {
 	t.Parallel()
 
-	//nolint:dogsled
 	pc, file, line, _ := runtime.Caller(0)
 	//nolint:goerr113
 	err := goexer.Wrap(goexer.Wrap(errors.New("orig"), "previous"), "current")
