@@ -2,6 +2,7 @@ package goexer
 
 import (
 	"fmt"
+	"log"
 	"runtime"
 	"strings"
 
@@ -216,11 +217,16 @@ func (e *Error) LogError(msg ...string) {
 
 // Log with fatal log level (with program exit!).
 func (e *Error) LogFatal(msg ...string) {
-	if zLog != nil {
+	switch {
+	case zLog != nil:
 		if e.AddTraceToError {
 			e.LogTraceToEvent(zLog.Error())
 		}
 		e.log(zLog.Fatal(), msg...)
+	case bLog != nil:
+		bLog.Fatal(e.MultiLinePrettyError() + "\n" + strings.Join(msg, " "))
+	default:
+		log.Fatal(e.MultiLinePrettyError() + "\n" + strings.Join(msg, " "))
 	}
 }
 
