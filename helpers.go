@@ -168,5 +168,7 @@ func SetBLog(log *log.Logger) {
 
 // Check error and log fatal message if not nil.
 func CheckErr(err error) {
-	ToError(err).LogFatal()
+	if err != nil {
+		ToError(err).LogFatal()
+	}
 }
