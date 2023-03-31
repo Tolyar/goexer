@@ -1,6 +1,7 @@
 package goexer
 
 import (
+	"encoding/json"
 	"fmt"
 	"reflect"
 
@@ -15,6 +16,9 @@ type Item struct {
 	Name  string // Just for better string representation.
 }
 
+// Marshaled representation.
+type Marshaled map[string]interface{}
+
 // Return string representation for Item.
 func (i *Item) String() string {
 	return fmt.Sprintf("Item{ Name: '%s' Type: '%s' Value: %v}", i.Name, i.Type, i.Get())
@@ -26,8 +30,8 @@ func (i *Item) GetRaw() interface{} {
 }
 
 // Return converted to original type, if possible, value of item.
-//
-//gocyclo:ignore
+
+//nolint:gocyclo
 func (i *Item) Get() any {
 	switch i.Type {
 	case "bool":
@@ -161,4 +165,25 @@ func (c *Container) Size() int {
 // Return all keys of fields inside Container.
 func (c *Container) Keys() []string {
 	return lo.Keys(c.items)
+}
+
+// Return marshaled representation.
+func (c *Container) Marshaled() Marshaled {
+	m := make(map[string]interface{}, len(c.items)+1)
+	for k, v := range c.items {
+		m[k] = v.Get()
+	}
+
+	return m
+}
+
+// return json representation.
+func (c *Container) JSON() ([]byte, error) {
+	j, err := json.Marshal(c.Marshaled())
+	if err != nil {
+		//nolint:wrapcheck
+		return nil, err
+	}
+
+	return j, nil
 }
